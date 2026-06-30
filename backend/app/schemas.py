@@ -20,6 +20,8 @@ class ChatOptions(BaseModel):
     repeat_penalty: float | None = Field(default=None, ge=0.5, le=2.0)
     num_predict: int | None = Field(default=None, ge=16, le=4096)
     num_ctx: int | None = Field(default=None, ge=512, le=8192)
+    num_thread: int | None = Field(default=None, ge=1, le=128)
+    num_batch: int | None = Field(default=None, ge=1, le=1024)
 
 
 class ChatRequest(BaseModel):

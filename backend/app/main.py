@@ -35,6 +35,11 @@ app.add_middleware(
 ollama = OllamaClient(settings)
 
 
+@app.on_event("startup")
+async def warmup_ollama() -> None:
+    await ollama.warmup()
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)

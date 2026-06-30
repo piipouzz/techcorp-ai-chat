@@ -48,4 +48,4 @@ ollama create techcorp-phi35-financial -f ollama_server/Modelfile
 
 L'adapter LoRA hérité `models/phi3_financial` est conservé pour analyse mais exclu du chemin de production.
 
-Les réponses sont optimisées pour un usage métier: contexte récent limité à 8 messages, `num_ctx` à 2048, `num_predict` à 110 et modèle gardé chargé avec `keep_alive`.
+Les réponses sont optimisées pour un usage métier: contexte récent limité à 4 messages, `num_ctx` à 768, `num_predict` à 50 et modèle gardé chargé avec `keep_alive`. Le backend lance aussi un préchauffage Ollama au démarrage.

@@ -267,6 +267,28 @@ async function streamResponse(messages, assistantId) {
   const decoder = new TextDecoder();
   let buffer = "";
   let fullText = "";
+  let flushTimer = null;
+  let lastFlush = 0;
+
+  const flush = (force = false) => {
+    const now = performance.now();
+    if (force || now - lastFlush > 120) {
+      if (flushTimer) {
+        clearTimeout(flushTimer);
+        flushTimer = null;
+      }
+      lastFlush = now;
+      updateAssistantMessage(assistantId, fullText, false);
+      return;
+    }
+    if (!flushTimer) {
+      flushTimer = setTimeout(() => {
+        flushTimer = null;
+        lastFlush = performance.now();
+        updateAssistantMessage(assistantId, fullText, false);
+      }, 120);
+    }
+  };
 
   while (true) {
     const { value, done } = await reader.read();
@@ -280,7 +302,7 @@ async function streamResponse(messages, assistantId) {
       if (!parsed) continue;
       if (parsed.event === "token") {
         fullText += parsed.data.content || "";
-        updateAssistantMessage(assistantId, fullText, false);
+        flush();
       }
       if (parsed.event === "error") {
         throw new Error(parsed.data.message || "Erreur du serveur.");
@@ -288,6 +310,9 @@ async function streamResponse(messages, assistantId) {
     }
   }
 
+  if (flushTimer) {
+    clearTimeout(flushTimer);
+  }
   updateAssistantMessage(assistantId, fullText.trim() || "Aucune reponse recue.", false);
 }
 
