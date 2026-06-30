@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TechCorp AI Chat</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Historique">
+        <div class="brand">
+          <div>
+            <span class="brand-mark">TC</span>
+          </div>
+          <div>
+            <h1>TechCorp AI Chat</h1>
+            <p>Phi-3.5-Financial</p>
+          </div>
+        </div>
+        <button class="new-chat" id="newChatButton" type="button">Nouveau chat</button>
+        <nav class="conversation-list" id="conversationList"></nav>
+      </aside>
+
+      <main class="chat-area">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Assistant financier</p>
+            <h2 id="conversationTitle">Nouvelle conversation</h2>
+          </div>
+          <div class="status-pill" id="statusPill" data-state="checking">Connexion...</div>
+        </header>
+
+        <section class="messages" id="messages" aria-live="polite"></section>
+
+        <form class="composer" id="composer">
+          <textarea
+            id="messageInput"
+            name="message"
+            rows="1"
+            maxlength="6000"
+            placeholder="Posez une question financière..."
+            autocomplete="off"
+          ></textarea>
+          <button id="sendButton" type="submit">Envoyer</button>
+        </form>
+      </main>
+    </div>
+
+    <script src="/assets/app.js" defer></script>
+  </body>
+</html>

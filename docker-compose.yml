@@ -1,0 +1,46 @@
+services:
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    volumes:
+      - ./ollama_server/Modelfile:/Modelfile:ro
+    entrypoint: ["/bin/sh", "-lc"]
+    command: >
+      "ollama pull phi3.5 &&
+       ollama create techcorp-phi35-financial -f /Modelfile"
+    restart: "no"
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    depends_on:
+      ollama:
+        condition: service_healthy
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      OLLAMA_BASE_URL: http://ollama:11434
+      OLLAMA_MODEL: techcorp-phi35-financial
+      ALLOWED_ORIGINS: http://localhost:8000,http://127.0.0.1:8000
+    ports:
+      - "8000:8000"
+
+volumes:
+  ollama-data:
