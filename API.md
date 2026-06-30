@@ -1,47 +1,61 @@
 # API
 
-Base URL locale: `http://localhost:8000`
+Base URL locale :
+
+```text
+http://localhost:8000
+```
 
 ## GET `/api/status`
 
-Retourne l'état du backend et de la connexion Ollama.
+Retourne l'état du backend et d'Ollama.
 
 ```json
 {
   "status": "ok",
-  "app": "TechCorp AI Chat",
-  "model": "techcorp-phi35-financial",
-  "ollama_base_url": "http://localhost:11434",
-  "ollama_available": true,
-  "detail": null
+  "ollama": "ok",
+  "model": "techcorp-phi35-financial"
 }
 ```
 
 ## POST `/api/chat`
 
-Réponse non streamée.
+Génération non streamée.
 
 ```json
 {
   "messages": [
-    { "role": "user", "content": "Explain value at risk." }
+    { "role": "user", "content": "Explique la Value at Risk en une phrase." }
   ]
+}
+```
+
+Réponse :
+
+```json
+{
+  "model": "techcorp-phi35-financial",
+  "message": {
+    "role": "assistant",
+    "content": "..."
+  },
+  "done": true
 }
 ```
 
 ## POST `/api/chat/stream`
 
-Réponse streamée en Server-Sent Events.
+Génération en Server-Sent Events.
 
-Evénements:
+Événements :
 
-- `token`: fragment de texte;
-- `done`: génération terminée;
-- `error`: erreur Ollama ou backend.
+- `token` : fragment de texte ;
+- `done` : génération terminée ;
+- `error` : erreur backend ou Ollama.
 
-## Codes d'erreur
+## Erreurs
 
-- `400`: demande bloquée par la politique sécurité.
-- `413`: conversation ou message trop long.
-- `502`: Ollama a répondu avec une erreur HTTP.
-- `503`: Ollama est indisponible.
+- `400` : demande bloquée par la politique de sécurité.
+- `413` : conversation ou message trop long.
+- `502` : Ollama a répondu avec une erreur HTTP.
+- `503` : Ollama est indisponible.
