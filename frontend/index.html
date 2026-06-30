@@ -8,29 +8,29 @@
   </head>
   <body>
     <div class="app-shell">
-      <aside class="sidebar" aria-label="Historique">
-        <div class="brand">
+      <aside class="sidebar" aria-label="Conversations">
+        <div class="product-header">
           <div>
-            <span class="brand-mark">TC</span>
+            <h1>TechCorp</h1>
+            <p>Analyse financiere</p>
           </div>
-          <div>
-            <h1>TechCorp AI Chat</h1>
-            <p>Phi-3.5-Financial</p>
-          </div>
+          <div class="status-dot" id="statusPill" data-state="checking">Verification</div>
         </div>
-        <button class="new-chat" id="newChatButton" type="button">Nouveau chat</button>
+
+        <button class="new-chat" id="newChatButton" type="button">Nouvelle conversation</button>
         <nav class="conversation-list" id="conversationList"></nav>
       </aside>
 
-      <main class="chat-area">
+      <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">Assistant financier</p>
+            <p class="section-label">Assistant financier</p>
             <h2 id="conversationTitle">Nouvelle conversation</h2>
           </div>
-          <div class="status-pill" id="statusPill" data-state="checking">Connexion...</div>
+          <div class="generation-indicator" id="generationIndicator" hidden>Generation en cours</div>
         </header>
 
+        <div class="error-bar" id="errorBar" hidden></div>
         <section class="messages" id="messages" aria-live="polite"></section>
 
         <form class="composer" id="composer">
@@ -39,7 +39,7 @@
             name="message"
             rows="1"
             maxlength="6000"
-            placeholder="Posez une question financière..."
+            placeholder="Ecrire un message..."
             autocomplete="off"
           ></textarea>
           <button id="sendButton" type="submit">Envoyer</button>

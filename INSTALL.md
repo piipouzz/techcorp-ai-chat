@@ -35,3 +35,9 @@ py -m venv .venv
 ```
 
 Ouvrir `http://localhost:8000`.
+
+Si Ollama a été installé via l'application Windows et que `ollama` n'est pas dans le `PATH`, utiliser:
+
+```powershell
+& "$env:LOCALAPPDATA\Programs\Ollama\ollama.exe" create techcorp-phi35-financial -f ollama_server\Modelfile
+```

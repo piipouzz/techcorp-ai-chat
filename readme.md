@@ -49,3 +49,5 @@ py scripts\test_phi35_financial.py --base-url http://localhost:8000
 ## Décision principale
 
 Ollama a été retenu car c'est l'option recommandée par le brief et la plus robuste pour un hackathon. Triton reste présent dans l'héritage, mais sa configuration ne chargeait pas le LoRA local et demandait plus de complexité sans gain immédiat. Le LoRA local est conservé pour audit uniquement, pas pour production.
+
+Les paramètres d'inférence sont volontairement sobres: température basse, `num_predict` réduit, contexte limité et `keep_alive` côté API pour réduire la latence après la première génération.

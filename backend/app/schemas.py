@@ -19,6 +19,7 @@ class ChatOptions(BaseModel):
     top_k: int | None = Field(default=None, ge=1, le=100)
     repeat_penalty: float | None = Field(default=None, ge=0.5, le=2.0)
     num_predict: int | None = Field(default=None, ge=16, le=4096)
+    num_ctx: int | None = Field(default=None, ge=512, le=8192)
 
 
 class ChatRequest(BaseModel):

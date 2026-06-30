@@ -4,6 +4,7 @@ const state = {
   conversations: [],
   currentId: null,
   sending: false,
+  copiedId: null,
 };
 
 const els = {
@@ -11,6 +12,8 @@ const els = {
   messages: document.getElementById("messages"),
   title: document.getElementById("conversationTitle"),
   status: document.getElementById("statusPill"),
+  generation: document.getElementById("generationIndicator"),
+  error: document.getElementById("errorBar"),
   form: document.getElementById("composer"),
   input: document.getElementById("messageInput"),
   send: document.getElementById("sendButton"),
@@ -30,6 +33,7 @@ function createConversation() {
   };
   state.conversations.unshift(conversation);
   state.currentId = conversation.id;
+  clearError();
   persist();
   render();
 }
@@ -56,7 +60,7 @@ function persist() {
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
-      conversations: state.conversations.slice(0, 25),
+      conversations: state.conversations.slice(0, 30),
       currentId: state.currentId,
     }),
   );
@@ -68,6 +72,14 @@ function escapeText(value) {
   return div.innerHTML;
 }
 
+function formatDate(value) {
+  try {
+    return new Intl.DateTimeFormat("fr-FR", { day: "2-digit", month: "2-digit" }).format(new Date(value));
+  } catch {
+    return "";
+  }
+}
+
 function renderList() {
   els.list.innerHTML = "";
   state.conversations.forEach((conversation) => {
@@ -77,10 +89,14 @@ function renderList() {
     const button = document.createElement("button");
     button.className = "conversation-button";
     button.type = "button";
-    button.textContent = conversation.title;
     button.setAttribute("aria-current", conversation.id === state.currentId ? "true" : "false");
+    button.innerHTML = `
+      <span class="conversation-title">${escapeText(conversation.title)}</span>
+      <span class="conversation-date">${formatDate(conversation.createdAt)}</span>
+    `;
     button.addEventListener("click", () => {
       state.currentId = conversation.id;
+      clearError();
       persist();
       render();
     });
@@ -88,7 +104,7 @@ function renderList() {
     const del = document.createElement("button");
     del.className = "delete-button";
     del.type = "button";
-    del.textContent = "X";
+    del.textContent = "Supprimer";
     del.setAttribute("aria-label", `Supprimer ${conversation.title}`);
     del.addEventListener("click", () => deleteConversation(conversation.id));
 
@@ -106,6 +122,7 @@ function deleteConversation(id) {
   if (state.currentId === id) {
     state.currentId = state.conversations[0].id;
   }
+  clearError();
   persist();
   render();
 }
@@ -118,8 +135,8 @@ function renderMessages() {
   if (!conversation?.messages.length) {
     els.messages.innerHTML = `
       <div class="empty-state">
-        <h3>TechCorp AI Chat</h3>
-        <p>Posez une question sur l'analyse financière, les marchés, le risque, la stratégie ou la modélisation économique.</p>
+        <h3>Aucune analyse en cours</h3>
+        <p>Les reponses sont volontairement courtes. Demandez plus de detail si necessaire.</p>
       </div>
     `;
     return;
@@ -135,17 +152,35 @@ function renderMessage(message) {
   const article = document.createElement("article");
   article.className = `message ${message.role}${message.error ? " error" : ""}`;
 
-  const avatar = document.createElement("div");
-  avatar.className = "avatar";
-  avatar.textContent = message.role === "user" ? "VO" : "AI";
+  const meta = document.createElement("div");
+  meta.className = "message-meta";
+  meta.textContent = message.role === "user" ? "Vous" : "Conseiller";
 
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.innerHTML = message.loading
-    ? '<span class="typing"><span></span><span></span><span></span></span>'
+  const body = document.createElement("div");
+  body.className = "message-body";
+  body.innerHTML = message.loading
+    ? '<span class="inline-loading">Preparation de la reponse</span>'
     : escapeText(message.content);
 
-  article.append(avatar, bubble);
+  const wrap = document.createElement("div");
+  wrap.className = "message-wrap";
+  wrap.append(meta, body);
+
+  if (message.role === "assistant" && !message.loading && !message.error) {
+    const actions = document.createElement("div");
+    actions.className = "message-actions";
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "copy-button";
+    copy.textContent = state.copiedId === message.id ? "Copie" : "Copier";
+    copy.addEventListener("click", () => copyMessage(message.id, message.content));
+
+    actions.append(copy);
+    wrap.append(actions);
+  }
+
+  article.append(wrap);
   return article;
 }
 
@@ -153,6 +188,7 @@ function render() {
   renderList();
   renderMessages();
   els.send.disabled = state.sending;
+  els.generation.hidden = !state.sending;
 }
 
 function scrollToBottom() {
@@ -171,9 +207,9 @@ function updateAssistantMessage(id, content, loading = false) {
 
 function appendMessage(message) {
   const conversation = currentConversation();
-  conversation.messages.push({ id: uid(), ...message });
+  conversation.messages.push({ id: uid(), createdAt: new Date().toISOString(), ...message });
   if (message.role === "user" && conversation.title === "Nouvelle conversation") {
-    conversation.title = message.content.slice(0, 54) || conversation.title;
+    conversation.title = message.content.replace(/\s+/g, " ").slice(0, 54) || conversation.title;
   }
   persist();
   render();
@@ -191,6 +227,7 @@ async function sendMessage(event) {
   const text = els.input.value.trim();
   if (!text || state.sending) return;
 
+  clearError();
   const conversation = currentConversation();
   appendMessage({ role: "user", content: text });
   els.input.value = "";
@@ -203,9 +240,11 @@ async function sendMessage(event) {
   try {
     await streamResponse(requestMessages(conversation), assistantId);
   } catch (error) {
-    updateAssistantMessage(assistantId, error.message || "Erreur inconnue.", false);
-    const message = conversation.messages.find((item) => item.id === assistantId);
-    if (message) message.error = true;
+    const message = friendlyError(error);
+    updateAssistantMessage(assistantId, message, false);
+    const assistant = conversation.messages.find((item) => item.id === assistantId);
+    if (assistant) assistant.error = true;
+    showError(message);
   } finally {
     state.sending = false;
     persist();
@@ -221,14 +260,7 @@ async function streamResponse(messages, assistantId) {
   });
 
   if (!response.ok) {
-    let detail = `HTTP ${response.status}`;
-    try {
-      const data = await response.json();
-      detail = data.detail?.message || data.detail || detail;
-    } catch {
-      detail = response.statusText || detail;
-    }
-    throw new Error(detail);
+    throw new Error(await responseError(response));
   }
 
   const reader = response.body.getReader();
@@ -256,7 +288,30 @@ async function streamResponse(messages, assistantId) {
     }
   }
 
-  updateAssistantMessage(assistantId, fullText || "Aucune réponse reçue.", false);
+  updateAssistantMessage(assistantId, fullText.trim() || "Aucune reponse recue.", false);
+}
+
+async function responseError(response) {
+  try {
+    const data = await response.json();
+    if (typeof data.detail === "string") return data.detail;
+    if (data.detail?.message) return data.detail.message;
+    if (data.detail?.code === "blocked_security_policy") return "Message bloque par la politique de securite.";
+  } catch {
+    return response.statusText || `HTTP ${response.status}`;
+  }
+  return response.statusText || `HTTP ${response.status}`;
+}
+
+function friendlyError(error) {
+  const message = String(error?.message || error || "");
+  if (message.includes("Ollama is not reachable")) {
+    return "Le moteur local Ollama est indisponible. Verifiez qu'il est demarre.";
+  }
+  if (message.includes("HTTP 404")) {
+    return "Le modele Ollama configure est introuvable. Recreez le modele techcorp-phi35-financial.";
+  }
+  return message || "Une erreur est survenue pendant la generation.";
 }
 
 function parseSse(rawEvent) {
@@ -270,16 +325,30 @@ function parseSse(rawEvent) {
   };
 }
 
+async function copyMessage(id, content) {
+  try {
+    await navigator.clipboard.writeText(content);
+    state.copiedId = id;
+    renderMessages();
+    setTimeout(() => {
+      state.copiedId = null;
+      renderMessages();
+    }, 1400);
+  } catch {
+    showError("Copie impossible depuis ce navigateur.");
+  }
+}
+
 async function checkStatus() {
   try {
     const response = await fetch("/api/status", { cache: "no-store" });
     const data = await response.json();
     if (response.ok && data.ollama_available) {
       els.status.dataset.state = "online";
-      els.status.textContent = "Connecte";
+      els.status.textContent = "Disponible";
     } else {
       els.status.dataset.state = "offline";
-      els.status.textContent = "Degrade";
+      els.status.textContent = "Indisponible";
     }
   } catch {
     els.status.dataset.state = "offline";
@@ -287,9 +356,19 @@ async function checkStatus() {
   }
 }
 
+function showError(message) {
+  els.error.textContent = message;
+  els.error.hidden = false;
+}
+
+function clearError() {
+  els.error.textContent = "";
+  els.error.hidden = true;
+}
+
 function resizeInput() {
   els.input.style.height = "auto";
-  els.input.style.height = `${Math.min(els.input.scrollHeight, 180)}px`;
+  els.input.style.height = `${Math.min(els.input.scrollHeight, 160)}px`;
 }
 
 els.form.addEventListener("submit", sendMessage);
